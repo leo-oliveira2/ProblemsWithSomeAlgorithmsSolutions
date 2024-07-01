@@ -1,17 +1,47 @@
-import java.util.ArrayList;
-import java.util.Collections;
 
 public class App {
     public static void main(String[] args) throws Exception{
         //Problema 1 - Itens 1 e 2
         // Arrays de tarefas faceis(l) e dificeis(h)
-        int[] l = {10, 50, 10, 20, 10};
-        int[] h = {0, 70, 0, 100, 0};
+        // int[] l = {10, 5, 10, 10, 10};
+        // int[] h = {0, 15, 40, 50, 15};
         //algoritmo item 1
-        versaoGreedy(l, h);
-        //algoritmo item 2 
-        // solveP1(l, h);
+        // versaoGreedy(l, h); - COMENTAR SOLVEP1 PARA TESTAR ESTE
+        //algoritmo item 2
 
+        //Conjuntos de dados para teste de tempo de execução:
+        int[][] lArrays = { 
+            {5, 3, 8},
+            {10, 5, 10, 10, 10},
+            {8, 2, 4, 6, 7, 3, 5, 8, 10, 1},
+            {7, 5, 8, 9, 6, 4, 7, 10, 5, 8, 3, 6, 9, 4, 5, 7, 6, 8, 9, 10},
+            new int[1000000]
+        };
+        
+        int[][] hArrays = {
+            {0, 10, 15},
+            {0, 15, 40, 50, 15},
+            {0, 20, 30, 50, 60, 40, 55, 70, 80, 25},
+            {0, 25, 35, 45, 50, 55, 60, 70, 75, 85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 135},
+            new int[1000000]
+        };
+
+        for (int i = 0; i < 1000000; i++) {
+            lArrays[4][i] = (i % 10) + 1;
+            hArrays[4][i] = (i % 15) + 20;
+        }
+
+        for (int i = 0; i < lArrays.length; i++) {
+            int[] l = lArrays[i];
+            int[] h = hArrays[i];
+
+            long startTime = System.nanoTime();
+            solveP1(l, h);
+            long endTime = System.nanoTime();
+
+            long duration = (endTime - startTime) / 1_000_000_000;
+            System.out.println("Tempo de execução para conjunto de dados " + (i + 1) + ": " + duration + " segundos");
+        }
 
         //Problema 2 - Item 1
 
@@ -29,7 +59,7 @@ public class App {
             if (i + 1 < n && h[i + 1] > l[i] + l[i + 1]) {
                 System.out.println("Escolha 'Fazer Nada' na semana " + (i + 1));
                 System.out.println("Escolha uma tarefa high stress na semana " + (i + 2));
-                i++; // Continue with iteration i+2
+                i++; 
             } else {
                 System.out.println("Escolha uma tarefa low stress na semana " + (i + 1));
             }
@@ -39,55 +69,49 @@ public class App {
     // Algoritmo baseado em programação dinâmica
     public static void solveP1(int[] l, int[] h) {
         int n = l.length;
-        int[] dp = new int[n]; // Array para armazenar o valor máximo acumulado até a semana i
-        int[] choice = new int[n]; // Array para armazenar a escolha feita em cada semana (0 para low, 1 para high)
+        int[] vlrMax = new int[n + 1];
+        int[] escolhas = new int[n + 1]; // 0 - fazer nada, 1 - baixa, 2 - alta
 
-        // Casos base
-        dp[0] = l[0]; // Se escolher low na primeira semana
-        choice[0] = 0; // Escolha low na primeira semana
-
-        if (n > 1) {
-            dp[1] = Math.max(l[1], h[1]); // Escolher o máximo entre low e high na segunda semana
-            choice[1] = l[1] > h[1] ? 0 : 1; // Escolha low se l[1] > h[1], senão high
+        vlrMax[0] = 0;
+        if (n > 0) {
+            vlrMax[1] = l[0];
+            escolhas[1] = 1;
         }
 
-        // Preenchimento dos valores para as semanas restantes usando programação dinâmica
-        for (int i = 2; i < n; i++) {
-            // Escolher entre (1) low na semana i e o máximo até i-1, ou (2) high na semana i e o máximo até i-2
-            if (dp[i - 1] + l[i] >= dp[i - 2] + h[i]) {
-                dp[i] = dp[i - 1] + l[i];
-                choice[i] = 0; // Escolhe low na semana i
+        for (int i = 2; i <= n; i++) {
+            int chooseLow = vlrMax[i - 1] + l[i - 1];
+            int chooseHigh = vlrMax[i - 2] + h[i - 1];
+
+            if (chooseLow >= chooseHigh) {
+                vlrMax[i] = chooseLow;
+                escolhas[i] = 1; // baixa dificuldade
             } else {
-                dp[i] = dp[i - 2] + h[i];
-                choice[i] = 1; // Escolhe high na semana i
+                vlrMax[i] = chooseHigh;
+                escolhas[i] = 2; // alta dificuldade
             }
         }
 
-        // Recuperação do plano ótimo
-       ArrayList<String> plan = new ArrayList<>();
-        int index = n - 1;
-        while (index >= 0) {
-            if (choice[index] == 0) {
-                plan.add("Choose a low-stress job in week " + (index + 1));
-                index--;
-            } else {
-                plan.add("Choose a high stress job in week " + (index + 1));
-                while (index > 0 && choice[index - 1] == 1) {
-                    index--; // Pula semanas adicionais com alta dificuldade
+        // Valor do plano ideal
+        System.out.println("Valor do plano ideal: " + vlrMax[n]);
+
+        // Reconstruindo as escolhas
+        System.out.println("Tarefas executadas em cada semana:");
+        int i = n;
+        while (i > 0) {
+            if (escolhas[i] == 1) {
+                System.out.println("Semana " + i + ": baixa dificuldade");
+                i--;
+            } else if (escolhas[i] == 2) {
+                System.out.println("Semana " + i + ": alta dificuldade");
+                if (i - 1 > 0) {
+                    System.out.println("Semana " + (i - 1) + ": fazer nada");
                 }
-                index--; // Avança para a semana anterior após escolher alta dificuldade
+                i -= 2;
             }
         }
-        Collections.reverse(plan); // Inverte a ordem para começar da semana 1 até n
-
-        // Imprime o plano de trabalho
-        for (String step : plan) {
-            System.out.println(step);
-        }
-
-        // Imprime o valor máximo alcançado
-        System.out.println("Maximum revenue: " + dp[n - 1]);
     }
+
+
 
     public static void solveP2(int n, int wi[], int vi[], int W){
 
