@@ -1,4 +1,6 @@
-
+import java.util.PriorityQueue;
+import java.util.Arrays;
+import java.util.Comparator;
 public class App {
     public static void main(String[] args) throws Exception{
         //Problema 1 - Itens 1 e 2
@@ -45,11 +47,13 @@ public class App {
 
         //Problema 2 - Item 1
 
-        int n = 1; //número de itens 
+        int n = 5; //número de itens 
         int[] wi = {5,6,2,4,7};//Vetor de peso (wi)
         int[] vi = {18,22,6,5,28}; //Vetor de valores (vi)
         int W = 11; // capacidade da mochila
-        solveP2(n,wi,vi,W);
+        solveP2(5, wi, vi, W);
+
+        // solveP2(n,wi,vi,W);
     }
 
     public static void versaoGreedy(int[] l, int[] h) {
@@ -91,7 +95,6 @@ public class App {
             }
         }
 
-        // Valor do plano ideal
         System.out.println("Valor do plano ideal: " + vlrMax[n]);
 
         // Reconstruindo as escolhas
@@ -110,11 +113,117 @@ public class App {
             }
         }
     }
+    static class Node implements Comparable<Node> {
+        int nivel;
+        int lucro;
+        int peso;
+        int bound;
+        boolean[] itemsIncluded;
+    
+        public Node(int nivel, int lucro, int peso, int bound, boolean[] itemsIncluded) {
+            this.nivel = nivel;
+            this.lucro = lucro;
+            this.peso = peso;
+            this.bound = bound;
+            this.itemsIncluded = itemsIncluded;
+        }
+    
+        @Override
+        public int compareTo(Node other) {
+            return Integer.compare(other.bound, this.bound);
+        }
+    }
 
+    public static void solveP2(int n, int[] wi, int[] vi, int W) {
+        // Create an array of indices and sort it based on value-to-peso ratio
+        Integer[] indices = new Integer[n];
+        for (int i = 0; i < n; i++) {
+            indices[i] = i;
+        }
+        // Sort indices based on value-to-peso ratio
+        Arrays.sort(indices, (a, b) -> Double.compare((double) vi[b] / wi[b], (double) vi[a] / wi[a]));
 
+        PriorityQueue<Node> queue = new PriorityQueue<>(new NodeComparator());
+        Node root = new Node(-1, 0, 0, bound(-1, 0, 0, n, W, wi, vi, indices), new boolean[n]);
+        queue.add(root);
 
-    public static void solveP2(int n, int wi[], int vi[], int W){
+        int maxlucro = 0;
+        boolean[] bestItems = new boolean[n];
 
+        while (!queue.isEmpty()) {
+            Node current = queue.poll();
+
+            if (current.nivel == -1) {
+                current.nivel = 0;
+            }
+
+            if (current.nivel == n - 1) {
+                continue;
+            }
+
+            int nextnivel = current.nivel + 1;
+            int index = indices[nextnivel];
+
+            // Consider the next item
+            if (current.peso + wi[index] <= W) {
+                int newpeso = current.peso + wi[index];
+                int newlucro = current.lucro + vi[index];
+                boolean[] newItemsIncluded = Arrays.copyOf(current.itemsIncluded, n);
+                newItemsIncluded[index] = true;
+
+                if (newlucro > maxlucro) {
+                    maxlucro = newlucro;
+                    bestItems = newItemsIncluded;
+                }
+
+                int newBound = bound(nextnivel, newlucro, newpeso, n, W, wi, vi, indices);
+                if (newBound > maxlucro) {
+                    queue.add(new Node(nextnivel, newlucro, newpeso, newBound, newItemsIncluded));
+                }
+            }
+
+            // Do not consider the next item
+            int newBound = bound(nextnivel, current.lucro, current.peso, n, W, wi, vi, indices);
+            if (newBound > maxlucro) {
+                queue.add(new Node(nextnivel, current.lucro, current.peso, newBound, current.itemsIncluded));
+            }
+        }
+
+        System.out.println("Valor ótimo para colocar na mochila: " + maxlucro);
+        System.out.println("Itens colocados na mochila:");
+        for (int i = 0; i < n; i++) {
+            if (bestItems[i]) {
+                System.out.println("Item " + i + " (Peso: " + wi[i] + ", Valor: " + vi[i] + ")");
+            }
+        }
+    }
+
+    private static int bound(int nivel, int lucro, int peso, int n, int W, int[] wi, int[] vi, Integer[] indices) {
+        if (peso >= W) {
+            return 0;
+        }
+
+        int lucroBound = lucro;
+        int totpeso = peso;
+        int j = nivel + 1;
+
+        while ((j < n) && (totpeso + wi[indices[j]] <= W)) {
+            totpeso += wi[indices[j]];
+            lucroBound += vi[indices[j]];
+            j++;
+        }
+
+        if (j < n) {
+            lucroBound += (W - totpeso) * vi[indices[j]] / wi[indices[j]];
+        }
+
+        return lucroBound;
+    }
+    static class NodeComparator implements Comparator<Node> {
+        @Override
+        public int compare(Node a, Node b) {
+            return Integer.compare(b.bound, a.bound);
+        }
     }
 
 }
